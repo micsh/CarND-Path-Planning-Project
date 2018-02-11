@@ -22,19 +22,19 @@ const double TRACK_DISTANCE = 6945.564;
 class Driver {
 
 public:
-	Driver(Map& map, Road& road, Car& car);
+	Driver(Map& map, Road& road);
 	~Driver();
 
-	void create_trajectory(vector<vector<Car>>& carsByLane, vector<vector<double>>& trajectory);
+	void create_trajectory(Car& car, vector<vector<Car>>& carsByLane, vector<vector<double>>& trajectory);
 
 private:
 	vector<double> JerkMinimizingTrajectory(vector<double> start, vector<double> end, double T);
 	void create_new_trajectory_points(vector<vector<double>>& trajectory);
-	void start_driving();
-	void keep_in_lane();
-	void decrease_speed();
-	void change_lane(int target_lane);
-	void update_state(int current_lane, int target_lane);
+	void start_driving(Car& car);
+	void keep_in_lane(Car& car);
+	void decrease_speed(Car& car);
+	void change_lane(Car& car, int target_lane);
+	void update_state(Car& car, int current_lane, int target_lane);
 
 	double _n;
 	STATE _state;
@@ -44,7 +44,6 @@ private:
 	vector<double> _end_d;
 	Road _road;
 	Map _map;
-	Car _car;
 };
 
 #endif

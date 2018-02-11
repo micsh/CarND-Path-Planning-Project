@@ -2,51 +2,50 @@
 
 using namespace std;
 
-Driver::Driver(Map& map, Road& road, Car& car) {
-	this->_state = STATE::START;
-	this->_map = map;
-	this->_road = road;
-	this->_car = car;
+Driver::Driver(Map& map, Road& road) {
+	_state = STATE::START;
+	_map = map;
+	_road = road;
 }
 
 Driver::~Driver() {}
 
-void Driver::create_trajectory(vector<vector<Car>>& carsByLane, vector<vector<double>> &trajectory) {
+void Driver::create_trajectory(Car& car, vector<vector<Car>>& carsByLane, vector<vector<double>> &trajectory) {
 	if (trajectory[0].size() < POINTS)
 	{
 		if (this->_state == STATE::START)
 		{
-			this->start_driving();
+			this->start_driving(car);
 		}
 		else if (this->_state == STATE::KEEP_LANE)
 		{
-			if (_road.is_lane_free(_car, carsByLane, _road.lane(_car)))
+			if (_road.is_lane_free(car, carsByLane, _road.lane(car)))
 			{
-				this->keep_in_lane();
+				this->keep_in_lane(car);
 			}
 			else
 			{
-				int target_lane = _road.get_free_lane(_car, carsByLane);
-				if (target_lane == _road.lane(_car))
+				int target_lane = _road.get_free_lane(car, carsByLane);
+				if (target_lane == _road.lane(car))
 				{
-					this->decrease_speed();
+					this->decrease_speed(car);
 				}
 				else
 				{
-					this->change_lane(target_lane);
+					this->change_lane(car, target_lane);
 				}
 			}
 		}
 		else
 		{
-			int last_lane = _road.lane(_road.last_target_center_lane(_car));
-			if (_road.is_lane_free(_car, carsByLane, last_lane))
+			int last_lane = _road.lane(_road.last_target_center_lane(car));
+			if (_road.is_lane_free(car, carsByLane, last_lane))
 			{
-				this->keep_in_lane();
+				this->keep_in_lane(car);
 			}
 			else
 			{
-				this->decrease_speed();
+				this->decrease_speed(car);
 			}
 		}
 
@@ -81,74 +80,74 @@ void Driver::create_new_trajectory_points(vector<vector<double>> &trajectory) {
 	}
 }
 
-void Driver::start_driving() {
+void Driver::start_driving(Car& car) {
 	_n = 8 * POINTS;
 	double target_v = _road.SpeedLimit() * 0.7;
-	double target_s = _car.s() + _n * AT * target_v;
+	double target_s = car.s() + _n * AT * target_v;
 
-	_start_s = { _car.s(), _car.v(), 0.0 };
+	_start_s = { car.s(), car.v(), 0.0 };
 	_end_s = { target_s, target_v, 0.0 };
 
-	double target_d = _road.center_lane(_car);
+	double target_d = _road.center_lane(car);
 
 	_start_d = { target_d, 0.0, 0.0 };
 	_end_d = { target_d, 0.0, 0.0 };
 
-	update_state(_road.lane(_car), _road.lane(_car));
+	update_state(car, _road.lane(car), _road.lane(car));
 }
 
-void Driver::keep_in_lane() {
+void Driver::keep_in_lane(Car& car) {
 	_n = CYCLES * POINTS;
-	double target_v = min(_car.previous_s()[1] * 1.2, _road.SpeedLimit());
-	double target_s = _car.previous_s()[0] + _n * AT * target_v;
+	double target_v = min(car.previous_s()[1] * 1.2, _road.SpeedLimit());
+	double target_s = car.previous_s()[0] + _n * AT * target_v;
 
-	_start_s = { _car.previous_s()[0], _car.previous_s()[1], 0.0 };
+	_start_s = { car.previous_s()[0], car.previous_s()[1], 0.0 };
 	_end_s = { target_s, target_v, 0.0 };
 
-	double target_d = _road.last_target_center_lane(_car);
+	double target_d = _road.last_target_center_lane(car);
 
 	_start_d = { target_d, 0.0, 0.0 };
 	_end_d = { target_d, 0.0, 0.0 };
 
-	update_state(_road.lane(target_d), _road.lane(target_d));
+	update_state(car, _road.lane(target_d), _road.lane(target_d));
 }
 
-void Driver::decrease_speed() {
+void Driver::decrease_speed(Car& car) {
 	_n = CYCLES * POINTS;
-	double target_v = max(_car.previous_s()[1] * 0.9, _road.SpeedLimit() / 2.0);
-	double target_s = _car.previous_s()[0] + _n * AT * target_v;
+	double target_v = max(car.previous_s()[1] * 0.9, _road.SpeedLimit() / 2.0);
+	double target_s = car.previous_s()[0] + _n * AT * target_v;
 
-	_start_s = { _car.previous_s()[0], _car.previous_s()[1], 0.0 };
+	_start_s = { car.previous_s()[0], car.previous_s()[1], 0.0 };
 	_end_s = { target_s, target_v, 0.0 };
 
-	double target_d = _road.last_target_center_lane(_car);
+	double target_d = _road.last_target_center_lane(car);
 
 	_start_d = { target_d, 0.0, 0.0 };
 	_end_d = { target_d, 0.0, 0.0 };
 
-	update_state(_road.lane(target_d), _road.lane(target_d));
+	update_state(car, _road.lane(target_d), _road.lane(target_d));
 }
 
-void Driver::change_lane(int target_lane) {
+void Driver::change_lane(Car& car, int target_lane) {
 	_n = CYCLES * POINTS;
-	double target_v = _car.previous_s()[1];
-	double target_s = _car.previous_s()[0] + _n * AT * target_v;
+	double target_v = car.previous_s()[1];
+	double target_s = car.previous_s()[0] + _n * AT * target_v;
 
-	_start_s = { _car.previous_s()[0], target_v, 0.0 };
+	_start_s = { car.previous_s()[0], target_v, 0.0 };
 	_end_s = { target_s, target_v, 0.0 };
 
-	double current_d = _road.last_target_center_lane(_car);
+	double current_d = _road.last_target_center_lane(car);
 	double target_d = _road.center_lane(target_lane);
 	
 	_start_d = { current_d, 0.0, 0.0 };
 	_end_d = { target_d, 0.0, 0.0 };
 
-	update_state(_road.lane(current_d), _road.lane(target_d));
+	update_state(car, _road.lane(current_d), _road.lane(target_d));
 }
 
-void Driver::update_state(int current_lane, int target_lane) {
-	_car.previous_s(this->_end_s);
-	_car.previous_d(this->_end_d);
+void Driver::update_state(Car& car, int current_lane, int target_lane) {
+	car.previous_s(this->_end_s);
+	car.previous_d(this->_end_d);
 
 	if (current_lane == target_lane)
 	{

@@ -211,7 +211,7 @@ int main()
 	Map map(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 	Road road(12.0, 3, 20.0);
 	Car car;
-	Driver driver(map, road, car);
+	Driver driver(map, road);
 
 	h.onMessage(
 		[&car, &road, &driver, &map](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
@@ -285,7 +285,7 @@ int main()
 					}
 
 					vector<vector<double>> trajectory = { next_x_vals, next_y_vals };
-					driver.create_trajectory(carsOnRoad, trajectory);
+					driver.create_trajectory(car, carsOnRoad, trajectory);
 
 					msgJson["next_x"] = trajectory[0];
 					msgJson["next_y"] = trajectory[1];
