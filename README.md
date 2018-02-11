@@ -4,13 +4,13 @@ Self-Driving Car Engineer Nanodegree Program
 ## Path Planning Project
 The goal of this project is to plan a path for the car to drive given the map, sensor fusion data and localization data. The path has to be smooth, safe and does not result in any kind of penalties.
 
-### Car
+##### Car
 The car object holds information such as location and velocity. It is used to represnt our car for driving and also other cars on the road.
 
-### Road
+##### Road
 The road holds information about the road width, number of lanes, etc... and is used to calculate available lanes, average speed on lanes and so on.
 
-### Driver
+##### Driver
 The driver is the brains for behavioural path planning. It uses a state machine to move from state to state:
 * Start
 * Keep Lane
@@ -40,6 +40,8 @@ s(t) = a_0 + a_1 * t + a_2 * t^2 + a_3 * t^3 + a_4 * t^4 + a_5 * t^5
 * Car does not have collisions. The car must not come into contact with any of the other cars on the road.
 * The car stays in its lane, except for the time between changing lanes. The car doesn't spend more than a 3 second length out side the lane lanes during changing lanes, and every other time the car stays inside one of the 3 lanes on the right hand side of the road.
 * The car is able to change lanes. The car is able to smoothly change lanes when it makes sense to do so, such as when behind a slower moving car and an adjacent lane is clear of other traffic.
+
+---
 
 ### Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
