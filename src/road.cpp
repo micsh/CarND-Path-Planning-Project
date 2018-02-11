@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "road.h"
 
 using namespace std;
@@ -35,18 +36,20 @@ bool Road::is_lane_free(Car& car, vector<vector<Car>>& carsByLane, int lane) {
 int Road::get_free_lane(Car& car, vector<vector<Car>>& carsByLane) {
 	int current_lane = lane(car);
 
-	if (is_lane_free(car, carsByLane, current_lane + 1)) {
-		return current_lane + 1;
-	}
-
 	if (is_lane_free(car, carsByLane, current_lane - 1)) {
+		if (is_lane_free(car, carsByLane, current_lane + 1)) {
+			double avg = average_speed(current_lane - 1, carsByLane);
+			if (average_speed(current_lane + 1, carsByLane) > avg) {
+				return current_lane + 1;
+			}
+		}
 		return current_lane - 1;
 	}
-
+	
 	return current_lane;
 }
 
-int Road::lane(Car & car)
+int Road::lane(Car& car)
 {
 	return lane(car.d());
 }
@@ -68,4 +71,42 @@ double Road::center_lane(Car& car) {
 double Road::center_lane(int lane) {
 	auto lane_width = _width / _numberOfLanes;
 	return lane * lane_width + lane_width / 2.0;
+}
+
+double Road::safe_speed(Car& car, vector<vector<Car>>& carsByLane) {
+	auto inLane = carsByLane[lane(car)];
+	double total = 0.0;
+	int counter = 0;
+	for (int i = 0; i < inLane.size(); i++) {
+		double distance = inLane[i].s() - car.s();
+		if (distance > 0 && distance < 80) {
+			total += inLane[i].v();
+			counter++;
+		}
+	}
+
+	return counter > 0 ? min(max(total / counter, average_speed(carsByLane)), _speedLimit) : _speedLimit;
+}
+
+double Road::average_speed(vector<vector<Car>>& carsByLane) {
+	double total = 0.0;
+	int counter = 0;
+	for (int i = 0; i < carsByLane.size(); i++) {
+		for (int j = 0; j < carsByLane[i].size(); j++) {
+			total += carsByLane[i][j].v();
+			counter++;
+		}
+	}
+
+	return (counter == 0) ? _speedLimit : total / counter;
+}
+
+double Road::average_speed(int lane, vector<vector<Car>>& carsByLane) {
+	auto inLane = carsByLane[lane];
+	double avg = 0.0;
+	for (int i = 0; i < inLane.size(); i++) {
+		avg += inLane[i].v() / inLane.size();
+	}
+
+	return (avg == 0.0) ? _speedLimit : avg;
 }

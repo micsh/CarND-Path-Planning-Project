@@ -25,8 +25,11 @@ public:
 	double last_target_center_lane(Car& car);
 	double center_lane(Car& car);
 	double center_lane(int lane);
+	double safe_speed(Car& car, vector<vector<Car>>& carsByLane);
 
 private:
+	double average_speed(vector<vector<Car>>& carsByLane);
+	double average_speed(int lane, vector<vector<Car>>& carsByLane);
 	double _width;
 	double _numberOfLanes;
 	double _speedLimit;

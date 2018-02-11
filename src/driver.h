@@ -31,7 +31,7 @@ private:
 	vector<double> JerkMinimizingTrajectory(vector<double> start, vector<double> end, double T);
 	void create_new_trajectory_points(vector<vector<double>>& trajectory);
 	void start_driving(Car& car);
-	void keep_in_lane(Car& car);
+	void keep_in_lane(Car& car, double average_speed_in_lane);
 	void decrease_speed(Car& car);
 	void change_lane(Car& car, int target_lane);
 	void update_state(Car& car, int current_lane, int target_lane);

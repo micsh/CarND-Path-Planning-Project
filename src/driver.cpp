@@ -1,5 +1,4 @@
 #include "driver.h"
-
 using namespace std;
 
 Driver::Driver(Map& map, Road& road) {
@@ -21,7 +20,7 @@ void Driver::create_trajectory(Car& car, vector<vector<Car>>& carsByLane, vector
 		{
 			if (_road.is_lane_free(car, carsByLane, _road.lane(car)))
 			{
-				this->keep_in_lane(car);
+				this->keep_in_lane(car, _road.safe_speed(car, carsByLane));
 			}
 			else
 			{
@@ -41,7 +40,7 @@ void Driver::create_trajectory(Car& car, vector<vector<Car>>& carsByLane, vector
 			int last_lane = _road.lane(_road.last_target_center_lane(car));
 			if (_road.is_lane_free(car, carsByLane, last_lane))
 			{
-				this->keep_in_lane(car);
+				this->keep_in_lane(car, _road.safe_speed(car, carsByLane));
 			}
 			else
 			{
@@ -96,9 +95,9 @@ void Driver::start_driving(Car& car) {
 	update_state(car, _road.lane(car), _road.lane(car));
 }
 
-void Driver::keep_in_lane(Car& car) {
+void Driver::keep_in_lane(Car& car, double average_speed_in_lane) {
 	_n = CYCLES * POINTS;
-	double target_v = min(car.previous_s()[1] * 1.2, _road.SpeedLimit());
+	double target_v = min(car.previous_s()[1] * 1.2, average_speed_in_lane);
 	double target_s = car.previous_s()[0] + _n * AT * target_v;
 
 	_start_s = { car.previous_s()[0], car.previous_s()[1], 0.0 };
