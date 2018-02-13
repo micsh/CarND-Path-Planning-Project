@@ -5,24 +5,34 @@ Car::Car() {
 }
 
 Car::Car(int id, double s, double d, double v) {
-    this->_id = id;
-    this->_s = s;
-    this->_d = d;
-	this->_v = v;
+    _id = id;
+    _s = s;
+    _d = d;
+	_v = v;
 }
 
 Car::~Car() {}
 
-double Car::s() { return this->_s; }
-double Car::d() { return this->_d; }
-double Car::v() { return this->_v; }
-vector<double> Car::previous_s() { return this->_previous_s; }
-void Car::previous_s(vector<double> previous_s) { this->_previous_s = previous_s; }
-vector<double> Car::previous_d() { return this->_previous_d; }
-void Car::previous_d(vector<double> previous_d) { this->_previous_d = previous_d; }
+double Car::s() const { return _s; }
+
+double Car::d() const { return _d; }
+
+double Car::v() const { return _v; }
+
+double Car::target_s() const { return _target_s; }
+
+double Car::target_d() const { return _target_d; }
+
+double Car::target_v() const { return _target_v; }
 
 void Car::update(double s, double d, double v) {
-    this->_s = s;
-    this->_d = d;
-	this->_v = v;
+    _s = s;
+    _d = d;
+	_v = v;
+}
+
+void Car::update_targets(double s, double d, double v) {
+	_target_s = s;
+	_target_d = d;
+	_target_v = v;
 }

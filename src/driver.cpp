@@ -1,7 +1,7 @@
 #include "driver.h"
 using namespace std;
 
-Driver::Driver(Map& map, Road& road) {
+Driver::Driver(Map const &map, Road const &road) {
 	_state = STATE::START;
 	_map = map;
 	_road = road;
@@ -9,53 +9,120 @@ Driver::Driver(Map& map, Road& road) {
 
 Driver::~Driver() {}
 
-void Driver::create_trajectory(Car& car, vector<vector<Car>>& carsByLane, vector<vector<double>> &trajectory) {
-	if (trajectory[0].size() < POINTS)
-	{
-		if (this->_state == STATE::START)
-		{
-			this->start_driving(car);
+void Driver::create_trajectory(vector<vector<Car>> const &carsByLane, Car& car, vector<vector<double>>& trajectory) {
+	if (trajectory[0].size() < POINTS) {
+
+		vector<double> start;
+		if (_state == STATE::START) {
+			start = start_driving(car);
 		}
-		else if (this->_state == STATE::KEEP_LANE)
-		{
-			if (_road.is_lane_free(car, carsByLane, _road.lane(car)))
-			{
-				this->keep_in_lane(car, _road.safe_speed(car, carsByLane));
-			}
-			else
-			{
-				int target_lane = _road.get_free_lane(car, carsByLane);
-				if (target_lane == _road.lane(car))
-				{
-					this->decrease_speed(car);
+		else if (_state == STATE::KEEP_LANE) {
+			int current_lane = _road.lane(car);
+			if (_road.is_lane_free(carsByLane, car, current_lane)) {
+				// is there a better lane ?
+				double ss = _road.safe_speed(carsByLane, car);
+				int target_lane = current_lane;
+				bool change = false;
+
+				if (ss < _road.SpeedLimit()) {
+					target_lane = _road.get_best_free_lane(carsByLane, car);
+					change = target_lane != current_lane && _road.safe_speed(carsByLane, target_lane, car.s()) > ss + 2.0;
 				}
-				else
-				{
-					this->change_lane(car, target_lane);
+
+				if (change) {
+					start = change_lane(car, target_lane);
+				}
+				else {
+					start = keep_lane(car, ss);
+				}
+			}
+			else {
+				cout << "Lane ahead not free... ";
+				int target_lane = _road.get_best_free_lane(carsByLane, car);
+				if (target_lane == current_lane) {
+					start = decrease_speed(car);
+				}
+				else {
+					start = change_lane(car, target_lane);
 				}
 			}
 		}
-		else
-		{
+		else {
 			int last_lane = _road.lane(_road.last_target_center_lane(car));
-			if (_road.is_lane_free(car, carsByLane, last_lane))
-			{
-				this->keep_in_lane(car, _road.safe_speed(car, carsByLane));
+			if (_road.is_lane_free(carsByLane, car, last_lane)) {
+				start = keep_lane(car, _road.safe_speed(carsByLane, car));
 			}
-			else
-			{
-				this->decrease_speed(car);
+			else {
+				start = decrease_speed(car);
 			}
 		}
 
-		this->create_new_trajectory_points(trajectory);
+
+		create_new_trajectory_points(start, { car.target_s(), car.target_d(), car.target_v() }, trajectory);
+
 	}
 }
 
-void Driver::create_new_trajectory_points(vector<vector<double>> &trajectory) {
+vector<double> Driver::start_driving(Car& car) {
+	_n = 4 * CYCLES * POINTS;
+	_state = STATE::KEEP_LANE;
+
+	double target_v = 0.6 * _road.SpeedLimit();
+	double target_s = car.s() + _n * AT * target_v;
+	double target_d = _road.center_lane(car);
+
+	vector<double> start = { car.s(), target_d, car.v() };
+	car.update_targets(target_s, target_d, target_v);
+
+	return start;
+}
+
+vector<double> Driver::keep_lane(Car& car, double safe_speed_in_lane) {
+	_n = CYCLES * POINTS;
+	_state = STATE::KEEP_LANE;
+
+	double target_v = min((safe_speed_in_lane + car.target_v()) / 2.0, car.target_v() * 1.3);
+	double target_s = car.target_s() + _n * AT * target_v;
+	double target_d = _road.last_target_center_lane(car);
+
+	vector<double> start = { car.target_s(), _road.last_target_center_lane(car), car.target_v() };
+	car.update_targets(target_s, target_d, target_v);
+
+	return start;
+}
+
+vector<double> Driver::decrease_speed(Car& car) {
+	_n = CYCLES * POINTS;
+	_state = STATE::KEEP_LANE;
+
+	double target_v = 0.8 * car.target_v();
+	double target_s = car.target_s() + _n * AT * target_v;
+	double target_d = _road.last_target_center_lane(car);
+
+	vector<double> start = { car.target_s(), target_d, car.target_v() };
+	car.update_targets(target_s, target_d, target_v);
+	
+	return start;
+}
+
+vector<double> Driver::change_lane(Car& car, int target_lane) {
+	_n = CYCLES * POINTS;
+	_state = STATE::CHANGING_LANE;
+
+	double target_v = car.target_v();
+	double target_s = car.target_s() + _n * AT * target_v;
+	double target_d = _road.center_lane(target_lane);
+
+	vector<double> start = { car.target_s(), _road.last_target_center_lane(car), target_v };
+	car.update_targets(target_s, target_d, target_v);
+
+	return start;
+}
+
+void Driver::create_new_trajectory_points(vector<double> const &start, vector<double> const &end, vector<vector<double>>& trajectory) const {
 	double T = _n * AT;
-	auto poly_s = this->JerkMinimizingTrajectory(this->_start_s, this->_end_s, T);
-	auto poly_d = this->JerkMinimizingTrajectory(this->_start_d, this->_end_d, T);
+	auto poly_s = JerkMinimizingTrajectory({ start[0], start[2], 0.0 }, { end[0], end[2], 0.0 }, T);
+	auto poly_d = JerkMinimizingTrajectory({ start[1], 0.0, 0.0 }, { end[1], 0.0, 0.0 }, T);
 
 	double t, next_s, next_d, mod_s, mod_d;
 	vector<double> XY;
@@ -79,86 +146,7 @@ void Driver::create_new_trajectory_points(vector<vector<double>> &trajectory) {
 	}
 }
 
-void Driver::start_driving(Car& car) {
-	_n = 8 * POINTS;
-	double target_v = _road.SpeedLimit() * 0.7;
-	double target_s = car.s() + _n * AT * target_v;
-
-	_start_s = { car.s(), car.v(), 0.0 };
-	_end_s = { target_s, target_v, 0.0 };
-
-	double target_d = _road.center_lane(car);
-
-	_start_d = { target_d, 0.0, 0.0 };
-	_end_d = { target_d, 0.0, 0.0 };
-
-	update_state(car, _road.lane(car), _road.lane(car));
-}
-
-void Driver::keep_in_lane(Car& car, double average_speed_in_lane) {
-	_n = CYCLES * POINTS;
-	double target_v = min(car.previous_s()[1] * 1.2, average_speed_in_lane);
-	double target_s = car.previous_s()[0] + _n * AT * target_v;
-
-	_start_s = { car.previous_s()[0], car.previous_s()[1], 0.0 };
-	_end_s = { target_s, target_v, 0.0 };
-
-	double target_d = _road.last_target_center_lane(car);
-
-	_start_d = { target_d, 0.0, 0.0 };
-	_end_d = { target_d, 0.0, 0.0 };
-
-	update_state(car, _road.lane(target_d), _road.lane(target_d));
-}
-
-void Driver::decrease_speed(Car& car) {
-	_n = CYCLES * POINTS;
-	double target_v = max(car.previous_s()[1] * 0.9, _road.SpeedLimit() / 2.0);
-	double target_s = car.previous_s()[0] + _n * AT * target_v;
-
-	_start_s = { car.previous_s()[0], car.previous_s()[1], 0.0 };
-	_end_s = { target_s, target_v, 0.0 };
-
-	double target_d = _road.last_target_center_lane(car);
-
-	_start_d = { target_d, 0.0, 0.0 };
-	_end_d = { target_d, 0.0, 0.0 };
-
-	update_state(car, _road.lane(target_d), _road.lane(target_d));
-}
-
-void Driver::change_lane(Car& car, int target_lane) {
-	_n = CYCLES * POINTS;
-	double target_v = car.previous_s()[1];
-	double target_s = car.previous_s()[0] + _n * AT * target_v;
-
-	_start_s = { car.previous_s()[0], target_v, 0.0 };
-	_end_s = { target_s, target_v, 0.0 };
-
-	double current_d = _road.last_target_center_lane(car);
-	double target_d = _road.center_lane(target_lane);
-	
-	_start_d = { current_d, 0.0, 0.0 };
-	_end_d = { target_d, 0.0, 0.0 };
-
-	update_state(car, _road.lane(current_d), _road.lane(target_d));
-}
-
-void Driver::update_state(Car& car, int current_lane, int target_lane) {
-	car.previous_s(this->_end_s);
-	car.previous_d(this->_end_d);
-
-	if (current_lane == target_lane)
-	{
-		this->_state = STATE::KEEP_LANE;
-	}
-	else
-	{
-		this->_state = STATE::CHANGING_LANE;
-	}
-}
-
-vector<double> Driver::JerkMinimizingTrajectory(vector<double> start, vector<double> end, double T) {
+vector<double> Driver::JerkMinimizingTrajectory(vector<double> const &start, vector<double> const &end, double T) const {
 	Eigen::MatrixXd A(3, 3);
 	Eigen::MatrixXd B(3, 1);
 

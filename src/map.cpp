@@ -13,7 +13,7 @@ Map::Map(vector<double> map_x, vector<double> map_y, vector<double> map_s, vecto
 
 Map::~Map() {}
 
-vector<double> Map::getXY(double s, double d) {
+vector<double> Map::getXY(double s, double d) const {
 	double next_x = _spline_x(s) + _spline_dx(s) * d;
 	double next_y = _spline_y(s) + _spline_dy(s) * d;
 

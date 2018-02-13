@@ -12,19 +12,18 @@ class Car
     Car(int id, double s, double d, double v);
     ~Car();
 
-    double s();
-    double d();
-	double v();
-    vector<double> previous_s();
-    void previous_s(vector<double> previous_s);
-    vector<double> previous_d();
-    void previous_d(vector<double> previous_d);
+    double s() const;
+    double d() const;
+	double v() const;
+	double target_s() const;
+	double target_d() const;
+	double target_v() const;
     void update(double s, double d, double v);
+	void update_targets(double s, double d, double v);
 
   private:
     int _id;
-    double _s, _d, _v;
-    vector<double> _previous_s, _previous_d;
+    double _s, _d, _v, _target_s, _target_d, _target_v;
 };
 
 #endif

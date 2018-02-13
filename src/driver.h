@@ -22,26 +22,21 @@ const double TRACK_DISTANCE = 6945.564;
 class Driver {
 
 public:
-	Driver(Map& map, Road& road);
+	Driver(Map const &map, Road const &road);
 	~Driver();
 
-	void create_trajectory(Car& car, vector<vector<Car>>& carsByLane, vector<vector<double>>& trajectory);
+	void create_trajectory(vector<vector<Car>> const &carsByLane, Car &car, vector<vector<double>>& trajectory);
 
 private:
-	vector<double> JerkMinimizingTrajectory(vector<double> start, vector<double> end, double T);
-	void create_new_trajectory_points(vector<vector<double>>& trajectory);
-	void start_driving(Car& car);
-	void keep_in_lane(Car& car, double average_speed_in_lane);
-	void decrease_speed(Car& car);
-	void change_lane(Car& car, int target_lane);
-	void update_state(Car& car, int current_lane, int target_lane);
+	vector<double> start_driving(Car& car);
+	vector<double> keep_lane(Car& car, double safe_speed_in_lane);
+	vector<double> decrease_speed(Car& car);
+	vector<double> change_lane(Car& car, int target_lane);
+	void create_new_trajectory_points(vector<double> const &start, vector<double> const &end, vector<vector<double>>& trajectory) const;
+	vector<double> JerkMinimizingTrajectory(vector<double> const &start, vector<double> const &end, double T) const;
 
 	double _n;
 	STATE _state;
-	vector<double> _start_s;
-	vector<double> _end_s;
-	vector<double> _start_d;
-	vector<double> _end_d;
 	Road _road;
 	Map _map;
 };
