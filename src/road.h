@@ -7,7 +7,7 @@
 using namespace std;
 
 const double FRONT_SAFE_DISTANCE = 30.0; // m
-const double BACK_SAFE_DISTANCE = -15.0; // m
+const double BACK_SAFE_DISTANCE = -10.0; // m
 
 class Road {
 public:

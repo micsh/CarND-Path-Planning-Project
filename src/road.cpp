@@ -20,22 +20,21 @@ int Road::Lanes() const { return _numberOfLanes; }
 double Road::Width() const { return _width; }
 
 bool Road::is_lane_free(vector<vector<Car>> const &carsByLane, Car const &car, int lane) const {
-	if (lane < 0 || lane > carsByLane.size() - 1) {
+	if (lane < 0 || lane >= _numberOfLanes) {
 		return false;
 	}
 
-	auto carsInLane = carsByLane[lane];
 	double ds, dv, dsdv;
-	for (auto&& otherCar : carsInLane) {
+	for (auto&& otherCar : carsByLane[lane]) {
 		ds = otherCar.s() - car.s();
 		dv = otherCar.v() - car.v();
 		dsdv = dv != 0 ? ds / dv : 0;
 
-		if (ds < 0 && ds > BACK_SAFE_DISTANCE && dsdv > -1.5) {
+		if (ds < 0 && ds > BACK_SAFE_DISTANCE && dsdv > -1.8) {
 			return false;
 		}
 
-		if (ds >= 0 && ds < FRONT_SAFE_DISTANCE && dsdv > -1.5) {
+		if (ds >= 0 && ds < FRONT_SAFE_DISTANCE && dsdv > -1.4) {
 			return false;
 		}
 	}
@@ -80,11 +79,10 @@ double Road::safe_speed(vector<vector<Car>> const &carsByLane, Car const &car) c
 }
 
 double Road::safe_speed(vector<vector<Car>> const &carsByLane, int lane, double s) const {
-	auto carsInLane = carsByLane[lane];
 	double distance, total = 0.0;
 	int counter = 0;
 
-	for (auto&& otherCar : carsInLane) {
+	for (auto&& otherCar : carsByLane[lane]) {
 		distance = otherCar.s() - s;
 		if (distance > 0 && distance < 80) {
 			total += otherCar.v();

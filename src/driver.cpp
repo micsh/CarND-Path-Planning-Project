@@ -11,55 +11,53 @@ Driver::~Driver() {}
 
 void Driver::create_trajectory(vector<vector<Car>> const &carsByLane, Car& car, vector<vector<double>>& trajectory) {
 	if (trajectory[0].size() < POINTS) {
+		auto start = execute_state(carsByLane, car);
+		create_new_trajectory_points(start, { car.target_s(), car.target_d(), car.target_v() }, trajectory);
+	}
+}
 
-		vector<double> start;
-		if (_state == STATE::START) {
-			start = start_driving(car);
-		}
-		else if (_state == STATE::KEEP_LANE) {
-			int current_lane = _road.lane(car);
-			if (_road.is_lane_free(carsByLane, car, current_lane)) {
-				// is there a better lane ?
-				double ss = _road.safe_speed(carsByLane, car);
-				int target_lane = current_lane;
-				bool change = false;
+vector<double> Driver::execute_state(vector<vector<Car>> const &carsByLane, Car &car) {
+	if (_state == STATE::START) {
+		return start_driving(car);
+	}
 
-				if (ss < _road.SpeedLimit()) {
-					target_lane = _road.get_best_free_lane(carsByLane, car);
-					change = target_lane != current_lane && _road.safe_speed(carsByLane, target_lane, car.s()) > ss + 2.0;
-				}
+	if (_state == STATE::KEEP_LANE) {
+		int current_lane = _road.lane(car);
+		if (_road.is_lane_free(carsByLane, car, current_lane)) {
+			// is there a better lane ?
+			double ss = _road.safe_speed(carsByLane, car);
+			int target_lane = current_lane;
+			bool change = false;
 
-				if (change) {
-					start = change_lane(car, target_lane);
-				}
-				else {
-					start = keep_lane(car, ss);
-				}
+			if (ss < _road.SpeedLimit()) {
+				target_lane = _road.get_best_free_lane(carsByLane, car);
+				change = target_lane != current_lane && _road.safe_speed(carsByLane, target_lane, car.s()) > ss + 2.0;
+			}
+
+			if (change) {
+				return change_lane(car, target_lane);
 			}
 			else {
-				cout << "Lane ahead not free... ";
-				int target_lane = _road.get_best_free_lane(carsByLane, car);
-				if (target_lane == current_lane) {
-					start = decrease_speed(car);
-				}
-				else {
-					start = change_lane(car, target_lane);
-				}
+				return keep_lane(car, ss);
 			}
 		}
 		else {
-			int last_lane = _road.lane(_road.last_target_center_lane(car));
-			if (_road.is_lane_free(carsByLane, car, last_lane)) {
-				start = keep_lane(car, _road.safe_speed(carsByLane, car));
+			// current lane is not free, either change or decrease speed
+			int target_lane = _road.get_best_free_lane(carsByLane, car);
+			if (target_lane == current_lane) {
+				return decrease_speed(car);
 			}
-			else {
-				start = decrease_speed(car);
-			}
+
+			return change_lane(car, target_lane);
 		}
+	}
 
-
-		create_new_trajectory_points(start, { car.target_s(), car.target_d(), car.target_v() }, trajectory);
-
+	// while changing lane
+	if (_road.is_lane_free(carsByLane, car, _road.lane(car.target_d()))) {
+		return keep_lane(car, _road.safe_speed(carsByLane, car));
+	}
+	else {
+		return decrease_speed(car);
 	}
 }
 
@@ -101,7 +99,7 @@ vector<double> Driver::decrease_speed(Car& car) {
 
 	vector<double> start = { car.target_s(), target_d, car.target_v() };
 	car.update_targets(target_s, target_d, target_v);
-	
+
 	return start;
 }
 

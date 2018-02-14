@@ -32,6 +32,7 @@ private:
 	vector<double> keep_lane(Car& car, double safe_speed_in_lane);
 	vector<double> decrease_speed(Car& car);
 	vector<double> change_lane(Car& car, int target_lane);
+	vector<double> execute_state(vector<vector<Car>> const &carsByLane, Car &car);
 	void create_new_trajectory_points(vector<double> const &start, vector<double> const &end, vector<vector<double>>& trajectory) const;
 	vector<double> JerkMinimizingTrajectory(vector<double> const &start, vector<double> const &end, double T) const;
 

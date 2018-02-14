@@ -4,25 +4,80 @@ Self-Driving Car Engineer Nanodegree Program
 ## Path Planning Project
 The goal of this project is to plan a path for the car to drive given the map, sensor fusion data and localization data. The path has to be smooth, safe and does not result in any kind of penalties.
 
-##### Car
-The car object holds information such as location and velocity. It is used to represnt our car for driving and also other cars on the road.
+#### Car
+The car object holds information such as location and velocity. It is used to represent our car for driving and also other cars on the road. It also holds the target state for the s, d, and v values assigned by the driver.
 
-##### Road
+#### Road
 The road holds information about the road width, number of lanes, etc... and is used to calculate available lanes, average speed on lanes and so on.
 
-##### Driver
+#### Driver
 The driver is the brains for behavioural path planning. It uses a state machine to move from state to state:
 * Start
 * Keep Lane
 * Change Lane (to a better lane)
 * Decrease speed
 
-When keeping lane, it uses a kind of 'adaptive cruise control' to drive with the optimal speed.
+When keeping lane, it uses a kind of 'adaptive cruise control' to drive with the optimal speed, here are the details of the state machine:
+
+* StartDriving
+	* Start driving and transition to *KeepLane*
+* KeepLane:
+	* Is lane safe ?
+    * Yes - check if other lanes are available where it's possible to drive faster.
+        * Yes - change lane and transition to *ChangingLane*.
+        * No - adjust speed and stay in *KeepLane*.
+    * No - check if other lanes are safe.
+        * Yes - change lane and transition to *ChangingLane*.
+        * No - decrease speed and stay in *KeepLane*.
+* ChangingLane:
+  * Is lane safe ?
+    * Yes - adjust speed and transition to *KeepLane*.
+    * No - decrease speed and transition to *KeepLane*.
+
+##### How is lane safety measured
+A distance is checked from front and back to other cars in the lane, the distance is kept minimal (see parametes selection below), and a time horizon to the next car (front and back) is measured for cars that are moving towards us (or away from us).
+```
+ds = otherCar.s() - car.s();
+dv = otherCar.v() - car.v();
+dsdv = dv != 0 ? ds / dv : 0;
+
+if (ds < 0 && ds > BACK_SAFE_DISTANCE && dsdv > -1.8) {
+	return false;
+}
+
+if (ds >= 0 && ds < FRONT_SAFE_DISTANCE && dsdv > -1.4) {
+	return false;
+}
+```
+
+##### How is check for available lanes measured
+First we check if the lane is safe, than we calcualte the safe speed in each available lane, and the one with the highest safe speed is the prefered one.
+```
+int Road::get_best_free_lane(vector<vector<Car>> const &carsByLane, Car const &car) const {
+	int current_lane = lane(car);
+
+	double ls = is_lane_free(carsByLane, car, current_lane - 1) ? safe_speed(carsByLane, current_lane - 1, car.s()) : -1;
+	double cs = is_lane_free(carsByLane, car, current_lane) ? safe_speed(carsByLane, current_lane, car.s()) : -1;
+	double rs = is_lane_free(carsByLane, car, current_lane + 1) ? safe_speed(carsByLane, current_lane + 1, car.s()) : -1;
+
+	return cs >= ls ? (cs >= rs ? current_lane : current_lane + 1) : (ls >= rs ? current_lane - 1 : current_lane + 1);
+}
+```
+
+##### How is speed limit and maximum acceleration avoided
+The next target speed always grows gradually to the average between the current target and the maximum possible speed in the lane (and also doesn't exceeds 30 percent increase). 
+```
+double target_v = min((safe_speed_in_lane + car.target_v()) / 2.0, car.target_v() * 1.3);
+```
+
+##### How is jerk avoided
+All the trajectories are calculated using the jerkMinimizingTrajectory algorithm describe below.
+
 
 Parameters selection
 The following are the parameters used:
 
-Safe front distance: 40m. Safe back distance: 20m. Road Width: 12m [0-4 left lane, 4 - 8 middle lane, 8 - 12 right lane]. Speed limit: 20m/s
+Safe front distance: 30m. Safe back distance: 10m. Road Width: 12m [0-4 left lane, 4 - 8 middle lane, 8 - 12 right lane]. Speed limit: 48 MPH
 
 Trajectory Generation Strategy
 Given a start S and end S from the previous states, create a jerk minimized path using JMT. Given a start D and end D from the previous states, create a jerk minimized path using JMT.
